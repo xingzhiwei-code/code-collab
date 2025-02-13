@@ -1,0 +1,30 @@
+{
+  "name": "code-collab",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@codemirror/autocomplete": "^6.18.6",
+    "@codemirror/commands": "^6.8.0",
+    "@codemirror/lang-javascript": "^6.2.3",
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/theme-one-dark": "^6.1.2",
+    "@codemirror/view": "^6.36.2",
+    "codemirror": "^6.0.1",
+    "highlight.js": "^11.11.1",
+    "prettier": "^3.2.5",
+    "vue": "^3.4.21",
+    "vuex": "^4.0.2"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "less": "^4.2.2",
+    "vite": "^6.1.0",
+    "vite-plugin-style-import": "^2.0.0"
+  }
+}
