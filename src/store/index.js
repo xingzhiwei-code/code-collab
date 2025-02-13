@@ -1,4 +1,5 @@
 import { createStore } from 'vuex'
+import webrtc from './modules/webrtc'
 
 export default createStore({
   state: {
@@ -41,5 +42,8 @@ export default createStore({
     selectSnippet({ commit }, snippetId) {
       commit('SET_SELECTED_SNIPPET', snippetId)
     }
+  },
+  modules: {
+    webrtc
   }
 })

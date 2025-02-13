@@ -1,62 +1,115 @@
 <script setup>
-import { onMounted, ref, computed, watch } from 'vue'
-import { EditorView, basicSetup } from 'codemirror'
-import { EditorState } from '@codemirror/state'
-import { javascript } from '@codemirror/lang-javascript'
-import { oneDark } from '@codemirror/theme-one-dark'
-import { useStore } from 'vuex'
-import { autocompletion, completionKeymap } from '@codemirror/autocomplete'
-import { keymap } from '@codemirror/view'
-import { formatCode } from '../utils/formatter'
+import { onMounted, ref, computed, watch } from 'vue';
+import { EditorView, basicSetup } from 'codemirror';
+import { EditorState } from '@codemirror/state';
+import { javascript } from '@codemirror/lang-javascript';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { useStore } from 'vuex';
+import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
+import { keymap } from '@codemirror/view';
+import { formatCode } from '../utils/formatter';
 
-const store = useStore()
-const editorContainer = ref(null)
-let editorView = null
+const store = useStore();
+const editorContainer = ref(null);
+let editorView = null;
+let dataChannel = null;
 
-const selectedSnippet = computed(() => store.getters.getSelectedSnippet)
+// 初始化WebRTC连接
+const initializeWebRTC = async () => {
+  try {
+    await store.dispatch('webrtc/initializePeerConnection');
+    const channel = await store.dispatch('webrtc/createDataChannel', {
+      label: 'editor',
+    });
+    dataChannel = channel;
+
+    dataChannel.onmessage = (event) => {
+      const { type, data } = JSON.parse(event.data);
+      if (type === 'editor-update' && editorView) {
+        const transaction = editorView.state.update(data);
+        editorView.dispatch(transaction);
+      } else if (type === 'cursor-update' && editorView) {
+        // 显示远程用户的光标位置
+        const remoteSelection = data;
+        // TODO: 实现远程光标的显示
+      }
+    };
+  } catch (error) {
+    console.error('初始化WebRTC连接失败:', error);
+  }
+};
+
+// 监听编辑器更新事件
+const handleEditorUpdate = (update) => {
+  if (dataChannel && dataChannel.readyState === 'open') {
+    const message = {
+      type: 'editor-update',
+      data: update,
+    };
+    dataChannel.send(JSON.stringify(message));
+  }
+};
+
+const handleCursorActivity = () => {
+  if (dataChannel && dataChannel.readyState === 'open' && editorView) {
+    const selection = editorView.state.selection.main;
+    const message = {
+      type: 'cursor-update',
+      data: {
+        from: selection.from,
+        to: selection.to,
+        head: selection.head,
+        anchor: selection.anchor,
+      },
+    };
+    dataChannel.send(JSON.stringify(message));
+  }
+};
+
+const selectedSnippet = computed(() => store.getters.getSelectedSnippet);
 
 watch(selectedSnippet, (newSnippet) => {
   if (newSnippet && editorView) {
-    const cursor = editorView.state.selection.main.head
+    const cursor = editorView.state.selection.main.head;
     const transaction = editorView.state.update({
       changes: {
         from: cursor,
-        insert: newSnippet.code
-      }
-    })
-    editorView.dispatch(transaction)
-    store.dispatch('selectSnippet', null)
+        insert: newSnippet.code,
+      },
+    });
+    editorView.dispatch(transaction);
+    store.dispatch('selectSnippet', null);
   }
-})
+});
 
 const formatEditorCode = async () => {
   if (!editorView) {
-    console.error('编辑器实例未初始化')
-    return
+    console.error('编辑器实例未初始化');
+    return;
   }
   try {
-    const currentCode = editorView.state.doc.toString()
-    const formattedCode = await formatCode(currentCode)
+    const currentCode = editorView.state.doc.toString();
+    const formattedCode = await formatCode(currentCode);
     if (formattedCode === currentCode) {
-      console.log('代码已经是格式化状态')
-      return
+      console.log('代码已经是格式化状态');
+      return;
     }
     const transaction = editorView.state.update({
       changes: {
         from: 0,
         to: editorView.state.doc.length,
-        insert: formattedCode
-      }
-    })
-    editorView.dispatch(transaction)
-    console.log('代码格式化成功')
+        insert: formattedCode,
+      },
+    });
+    editorView.dispatch(transaction);
+    console.log('代码格式化成功');
   } catch (error) {
-    console.error('代码格式化失败:', error)
+    console.error('代码格式化失败:', error);
   }
-}
+};
 
 onMounted(() => {
-  if (!editorContainer.value) return
+  if (!editorContainer.value) return;
 
   const startState = EditorState.create({
     doc: '// 在这里开始编写代码\n',
@@ -67,26 +120,39 @@ onMounted(() => {
       EditorView.lineWrapping,
       autocompletion(),
       keymap.of(completionKeymap),
+      EditorView.updateListener.of((update) => {
+        if (update.docChanged) {
+          handleEditorUpdate(update);
+        }
+        if (update.selectionSet) {
+          handleCursorActivity();
+        }
+      }),
       EditorView.theme({
         '&': {
           height: '100%',
-          minHeight: '300px'
-        }
-      })
-    ]
-  })
+          minHeight: '300px',
+        },
+      }),
+    ],
+  });
 
   editorView = new EditorView({
     state: startState,
-    parent: editorContainer.value
-  })
-})
+    parent: editorContainer.value,
+  });
+
+  // 初始化WebRTC连接
+  initializeWebRTC();
+});
 </script>
 
 <template>
   <div class="editor-wrapper">
     <div class="format-button-container">
-      <button @click="formatEditorCode" class="format-button">格式化代码</button>
+      <button @click="formatEditorCode" class="format-button">
+        格式化代码
+      </button>
     </div>
     <div class="editor-container" ref="editorContainer"></div>
   </div>

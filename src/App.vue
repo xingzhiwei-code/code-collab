@@ -1,6 +1,7 @@
 <script setup>
 import Editor from './components/Editor.vue'
 import SnippetPanel from './components/SnippetPanel.vue'
+import ChatPanel from './components/ChatPanel.vue'
 </script>
 
 <template>
@@ -13,8 +14,13 @@ import SnippetPanel from './components/SnippetPanel.vue'
       <div class="editor-container">
         <Editor />
       </div>
-      <div class="snippet-container">
-        <SnippetPanel />
+      <div class="side-panel">
+        <div class="snippet-container">
+          <SnippetPanel />
+        </div>
+        <div class="chat-container">
+          <ChatPanel />
+        </div>
       </div>
     </main>
   </div>
@@ -58,9 +64,21 @@ import SnippetPanel from './components/SnippetPanel.vue'
   overflow: hidden;
 }
 
-.snippet-container {
+.side-panel {
   width: 20rem;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.snippet-container {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.chat-container {
+  flex: 1;
   overflow-y: auto;
 }
 
