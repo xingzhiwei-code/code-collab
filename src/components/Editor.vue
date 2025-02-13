@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { EditorView, basicSetup } from 'codemirror'
 import { EditorState } from '@codemirror/state'
 import { javascript } from '@codemirror/lang-javascript'
@@ -12,6 +12,22 @@ import { formatCode } from '../utils/formatter'
 const store = useStore()
 const editorContainer = ref(null)
 let editorView = null
+
+const selectedSnippet = computed(() => store.getters.getSelectedSnippet)
+
+watch(selectedSnippet, (newSnippet) => {
+  if (newSnippet && editorView) {
+    const cursor = editorView.state.selection.main.head
+    const transaction = editorView.state.update({
+      changes: {
+        from: cursor,
+        insert: newSnippet.code
+      }
+    })
+    editorView.dispatch(transaction)
+    store.dispatch('selectSnippet', null)
+  }
+})
 
 const formatEditorCode = async () => {
   if (!editorView) {

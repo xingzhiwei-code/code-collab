@@ -1,9 +1,14 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useStore } from 'vuex'
 
 const store = useStore()
 const snippets = computed(() => store.getters.getSnippets)
+const editingSnippet = ref(null)
+
+const insertSnippet = (snippet) => {
+  store.dispatch('selectSnippet', snippet)
+}
 
 const addSnippet = () => {
   const newSnippet = {
@@ -13,10 +18,30 @@ const addSnippet = () => {
     language: store.getters.getCurrentLanguage
   }
   store.dispatch('addSnippet', newSnippet)
+  editingSnippet.value = newSnippet.id
 }
 
 const removeSnippet = (snippetId) => {
   store.dispatch('removeSnippet', snippetId)
+}
+
+const updateSnippet = (snippet) => {
+  store.dispatch('updateSnippet', {
+    id: snippet.id,
+    updates: {
+      name: snippet.name,
+      code: snippet.code
+    }
+  })
+}
+
+const startEditing = (snippetId) => {
+  editingSnippet.value = snippetId
+}
+
+const stopEditing = (snippet) => {
+  editingSnippet.value = null
+  updateSnippet(snippet)
 }
 </script>
 
@@ -29,10 +54,26 @@ const removeSnippet = (snippetId) => {
     <div class="snippets-list">
       <div v-for="snippet in snippets" :key="snippet.id" class="snippet-item">
         <div class="snippet-header">
-          <h3 class="snippet-title">{{ snippet.name }}</h3>
-          <button @click="() => removeSnippet(snippet.id)" class="delete-button">删除</button>
+          <input
+            v-if="editingSnippet === snippet.id"
+            v-model="snippet.name"
+            class="snippet-title-input"
+            @blur="stopEditing(snippet)"
+            @keyup.enter="stopEditing(snippet)"
+          >
+          <h3 v-else class="snippet-title" @click="startEditing(snippet.id)">{{ snippet.name }}</h3>
+          <div class="snippet-actions">
+            <button @click="() => insertSnippet(snippet)" class="insert-button">插入</button>
+            <button @click="() => removeSnippet(snippet.id)" class="delete-button">删除</button>
+          </div>
         </div>
-        <pre class="snippet-code">{{ snippet.code }}</pre>
+        <textarea
+          v-if="editingSnippet === snippet.id"
+          v-model="snippet.code"
+          class="snippet-code-input"
+          @blur="stopEditing(snippet)"
+        ></textarea>
+        <pre v-else class="snippet-code" @click="startEditing(snippet.id)">{{ snippet.code }}</pre>
       </div>
     </div>
   </div>
@@ -96,6 +137,20 @@ const removeSnippet = (snippetId) => {
   font-weight: 500;
 }
 
+.snippet-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.insert-button {
+  color: #34d399;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #10b981;
+  }
+}
+
 .delete-button {
   color: #f87171;
   transition: color 0.2s;
@@ -111,5 +166,35 @@ const removeSnippet = (snippetId) => {
   background-color: #111827;
   padding: 0.5rem;
   border-radius: 0.25rem;
+  cursor: pointer;
+}
+
+.snippet-title-input {
+  background-color: #111827;
+  border: 1px solid #374151;
+  color: #ffffff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 1rem;
+  font-weight: 500;
+  width: 100%;
+  margin-right: 0.5rem;
+}
+
+.snippet-code-input {
+  width: 100%;
+  min-height: 100px;
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: #d1d5db;
+  background-color: #111827;
+  padding: 0.5rem;
+  border: 1px solid #374151;
+  border-radius: 0.25rem;
+  resize: vertical;
+}
+
+.snippet-title {
+  cursor: pointer;
 }
 </style>
